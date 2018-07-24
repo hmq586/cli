@@ -8,8 +8,9 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("create-org", func() {
-	When("invoked with --help", func() {
+
+var _ = FDescribe("create-org", func() {
+	Context("when invoked with --help", func() {
 		It("displays the help information", func() {
 			session := helpers.CF("create-org", "--help")
 			Eventually(session).Should(Say(`NAME:`))
@@ -61,7 +62,7 @@ var _ = Describe("create-org", func() {
 				Eventually(session).Should(Exit(0))
 			})
 
-			XIt("fails with an insufficient scope error", func() {
+			It("fails with an insufficient scope error", func() {
 				orgName := helpers.NewOrgName()
 				session := helpers.CF("create-org", orgName)
 				Eventually(session.Out).Should(Say("Error creating organization %s\\.", orgName))
@@ -83,6 +84,17 @@ var _ = Describe("create-org", func() {
 				Eventually(session).Should(Exit(0))
 			})
 
+
+			It("makes the user an org manager", func() {
+				orgName := helpers.NewOrgName()
+				session := helpers.CF("create-org", orgName)
+				Eventually(session).Should(Exit(0))
+
+				session = helpers.CF("org-users", orgName)
+				Eventually(session).Should(Exit(0))
+				Expect(session.Out).To(Say("ORG MANAGER\\n\\s+%s", user))
+			})
+
 			When("an existing quota is provided", func() {
 				var quotaName string
 
@@ -92,7 +104,7 @@ var _ = Describe("create-org", func() {
 					Eventually(session).Should(Exit(0))
 				})
 
-				XIt("creates the org with the provided quota", func() {
+				It("creates the org with the provided quota", func() {
 					orgName := helpers.NewOrgName()
 					session := helpers.CF("create-org", orgName, "-q", quotaName)
 					Eventually(session).Should(Exit(0))
@@ -105,6 +117,7 @@ var _ = Describe("create-org", func() {
 
 			When("a nonexistent quota is provided", func() {
 				XIt("fails with an error and does not create the org", func() {
+
 					orgName := helpers.NewOrgName()
 					session := helpers.CF("create-org", orgName, "-q", "no-such-quota")
 					Eventually(session.Err).Should(Say("FAILED\\n"))
@@ -125,7 +138,7 @@ var _ = Describe("create-org", func() {
 				Eventually(session).Should(Exit(0))
 			})
 
-			XIt("warns the user that the org already exists", func() {
+			It("warns the user that the org already exists", func() {
 				session := helpers.CF("create-org", orgName)
 				Eventually(session.Out).Should(Say("Creating org %s as %s\\.\\.\\.", orgName, user))
 				Eventually(session.Out).Should(Say("OK\\n"))
