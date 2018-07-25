@@ -90,6 +90,22 @@ var _ = Describe("CreateOrgCommand", func() {
 					)
 				})
 
+				Context("when the -q is passed", func() {
+					BeforeEach(func() {
+						cmd.Quota = "some-quota-name"
+					})
+
+					Context("when the quota doesn't exist", func() {
+						fakeActor.CreateOrganizationReturns(
+							v2action.Organization{GUID: "fake-org-id"},
+							v2action.Warnings{"warn-1", "warn-2"},
+							nil,
+						)
+					})
+
+				})
+
+
 				When("making the user an org manager succeeds", func() {
 					BeforeEach(func() {
 						fakeActor.GrantOrgManagerByUsernameReturns(
@@ -119,8 +135,16 @@ var _ = Describe("CreateOrgCommand", func() {
 				})
 
 				When("making the user an org manager fails", func() {
-					It("returns an error and prints warnings", func() {
+					BeforeEach(func() {
+						fakeActor.GrantOrgManagerByUsernameReturns(
+							v2action.Warnings{"warn-role"},
+							errors.New("some-error"),
+						)
+					})
 
+					It("returns an error and prints warnings", func() {
+						Expect(executeErr).To(MatchError("some-error"))
+						//TODO: figure out what is displayed
 					})
 				})
 			})
