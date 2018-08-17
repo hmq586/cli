@@ -109,7 +109,7 @@ var _ = Describe("CreateOrgCommand", func() {
 							Expect(testUI.Err).To(Say("warn-1\nwarn-2\n"))
 						})
 					})
-			})
+				})
 
 				When("making the user an org manager succeeds", func() {
 					BeforeEach(func() {

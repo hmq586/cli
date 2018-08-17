@@ -8,8 +8,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-
-var _ = FDescribe("create-org", func() {
+var _ = Describe("create-org", func() {
 	Context("when invoked with --help", func() {
 		It("displays the help information", func() {
 			session := helpers.CF("create-org", "--help")
@@ -84,7 +83,6 @@ var _ = FDescribe("create-org", func() {
 				Eventually(session).Should(Exit(0))
 			})
 
-
 			It("makes the user an org manager", func() {
 				orgName := helpers.NewOrgName()
 				session := helpers.CF("create-org", orgName)
@@ -115,14 +113,8 @@ var _ = FDescribe("create-org", func() {
 				})
 			})
 
-<<<<<<< HEAD
 			When("a nonexistent quota is provided", func() {
 				XIt("fails with an error and does not create the org", func() {
-
-=======
-			Context("when a nonexistent quota is provided", func() {
-				XIt("fails with an error and does not create the org", func() {
->>>>>>> ebd00646a... pass query parameters correctly when fetching quota by name
 					orgName := helpers.NewOrgName()
 					session := helpers.CF("create-org", orgName, "-q", "no-such-quota")
 					Eventually(session.Err).Should(Say("FAILED\\n"))
