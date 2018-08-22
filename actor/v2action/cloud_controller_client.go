@@ -35,7 +35,7 @@ type CloudControllerClient interface {
 	GetOrganization(guid string) (ccv2.Organization, ccv2.Warnings, error)
 	GetOrganizationPrivateDomains(orgGUID string, filters ...ccv2.Filter) ([]ccv2.Domain, ccv2.Warnings, error)
 	GetOrganizationQuota(guid string) (ccv2.OrganizationQuota, ccv2.Warnings, error)
-	GetOrganizationQuotaByName(name string) (ccv2.OrganizationQuota, ccv2.Warnings, error)
+	GetOrganizationQuotas(filters ...ccv2.Filter) ([]ccv2.OrganizationQuota, ccv2.Warnings, error)
 	GetOrganizations(filters ...ccv2.Filter) ([]ccv2.Organization, ccv2.Warnings, error)
 	GetPrivateDomain(domainGUID string) (ccv2.Domain, ccv2.Warnings, error)
 	GetRouteApplications(routeGUID string, filters ...ccv2.Filter) ([]ccv2.Application, ccv2.Warnings, error)

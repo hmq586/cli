@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/command"
@@ -72,7 +73,15 @@ func (cmd CreateOrgCommand) Execute(args []string) error {
 	org, warnings, err := cmd.Actor.CreateOrganization(orgName, cmd.Quota)
 	cmd.UI.DisplayWarnings(warnings)
 	if err != nil {
-		return err
+		if _, ok := err.(actionerror.OrganizationNameTakenError); ok {
+			cmd.UI.DisplayOK()
+			cmd.UI.DisplayWarning("Org {{.OrgName}} already exists.", map[string]interface{}{
+				"OrgName": cmd.RequiredArgs.Organization,
+			})
+			return nil
+		} else {
+			return err
+		}
 	}
 	cmd.UI.DisplayOK()
 	cmd.UI.DisplayNewline()
@@ -82,11 +91,12 @@ func (cmd CreateOrgCommand) Execute(args []string) error {
 			"OrgName":  orgName,
 			"Username": user.Name,
 		})
+
 	warnings, err = cmd.Actor.GrantOrgManagerByUsername(org.GUID, user.Name)
+	cmd.UI.DisplayWarnings(warnings)
 	if err != nil {
 		return err
 	}
-	cmd.UI.DisplayWarnings(warnings)
 
 	cmd.UI.DisplayOK()
 	cmd.UI.DisplayNewline()

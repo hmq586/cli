@@ -1,10 +1,8 @@
 package ccv2
 
 import (
-	"fmt"
-	"net/url"
-
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
 )
 
@@ -57,24 +55,32 @@ func (client *Client) GetOrganizationQuota(guid string) (OrganizationQuota, Warn
 	return orgQuota, response.Warnings, err
 }
 
-// GetOrganizationQuotaByName returns an Organization Quota associated with the
-// provided name.
-func (client *Client) GetOrganizationQuotaByName(name string) (OrganizationQuota, Warnings, error) {
+// GetOrganizationQuotas returns an Organization Quota list associated with the
+// provided filters.
+func (client *Client) GetOrganizationQuotas(filters ...Filter) ([]OrganizationQuota, Warnings, error) {
+	allQueries := ConvertFilterParameters(filters)
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.GetOrganizationQuotaDefinitionsRequest,
-		Query: url.Values{
-			"q": {fmt.Sprintf("name:%s", name)},
-		},
+		Query:       allQueries,
 	})
+
 	if err != nil {
-		return OrganizationQuota{}, nil, err
+		return []OrganizationQuota{}, nil, err
 	}
 
-	var orgQuota OrganizationQuota
-	response := cloudcontroller.Response{
-		Result: &orgQuota,
-	}
+	var fullOrgQuotasList []OrganizationQuota
 
-	err = client.connection.Make(request, &response)
-	return orgQuota, response.Warnings, err
+	warnings, err := client.paginate(request, OrganizationQuota{}, func(item interface{}) error {
+		if org, ok := item.(OrganizationQuota); ok {
+			fullOrgQuotasList = append(fullOrgQuotasList, org)
+		} else {
+			return ccerror.UnknownObjectInListError{
+				Expected:   OrganizationQuota{},
+				Unexpected: item,
+			}
+		}
+		return nil
+	})
+
+	return fullOrgQuotasList, warnings, err
 }

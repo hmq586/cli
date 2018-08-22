@@ -81,6 +81,21 @@ var _ = Describe("CreateOrgCommand", func() {
 				}, nil)
 			})
 
+			When("the -q is passed", func() {
+				var quotaName string
+
+				BeforeEach(func() {
+					quotaName = "some-quota-name"
+					cmd.Quota = quotaName
+				})
+
+				It("provides the quota when creating the org", func() {
+					Expect(executeErr).ToNot(HaveOccurred())
+					_, inputQuota := fakeActor.CreateOrganizationArgsForCall(0)
+					Expect(inputQuota).To(Equal("some-quota-name"))
+				})
+			})
+
 			When("creating the org succeeds", func() {
 				BeforeEach(func() {
 					fakeActor.CreateOrganizationReturns(
@@ -90,25 +105,17 @@ var _ = Describe("CreateOrgCommand", func() {
 					)
 				})
 
-				Context("when the -q is passed", func() {
-					BeforeEach(func() {
-						cmd.Quota = "some-quota-name"
-					})
+				It("creates the org and displays warnings", func() {
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(fakeConfig.CurrentUserCallCount()).To(Equal(1))
+					Expect(testUI.Out).To(Say("Creating org %s as %s\\.\\.\\.", orgName, username))
+					Expect(testUI.Err).To(Say("warn-1\nwarn-2\n"))
+					Expect(testUI.Out).To(Say("OK\n\n"))
 
-					Context("when the quota doesn't exist", func() {
-						BeforeEach(func() {
-							fakeActor.CreateOrganizationReturns(
-								v2action.Organization{},
-								v2action.Warnings{"warn-1", "warn-2"},
-								errors.New("boom"),
-							)
-						})
-
-						It("prints warnings and returns an error", func() {
-							Expect(executeErr).To(MatchError("boom"))
-							Expect(testUI.Err).To(Say("warn-1\nwarn-2\n"))
-						})
-					})
+					Expect(fakeActor.CreateOrganizationCallCount()).To(Equal(1))
+					inputOrg, quota := fakeActor.CreateOrganizationArgsForCall(0)
+					Expect(inputOrg).To(Equal("some-org"))
+					Expect(quota).To(BeEmpty())
 				})
 
 				When("making the user an org manager succeeds", func() {
@@ -119,19 +126,14 @@ var _ = Describe("CreateOrgCommand", func() {
 						)
 					})
 
-					It("creates the org and displays warnings", func() {
+					It("displays warnings and a tip", func() {
 						Expect(executeErr).ToNot(HaveOccurred())
 						Expect(fakeConfig.CurrentUserCallCount()).To(Equal(1))
-						Expect(testUI.Out).To(Say("Creating org %s as %s\\.\\.\\.", orgName, username))
-						Expect(testUI.Err).To(Say("warn-1\nwarn-2\n"))
-						Expect(testUI.Out).To(Say("OK\n\n"))
 						Expect(testUI.Out).To(Say("Assigning role OrgManager to user %s in org %s\\.\\.\\.", username, orgName))
 						Expect(testUI.Err).To(Say("warn-role\n"))
 						Expect(testUI.Out).To(Say("OK\n\n"))
 						Expect(testUI.Out).To(Say(`TIP: Use 'cf target -o "%s"' to target new org`, orgName))
 
-						Expect(fakeActor.CreateOrganizationCallCount()).To(Equal(1))
-						Expect(fakeActor.CreateOrganizationArgsForCall(0)).To(Equal("some-org"))
 						Expect(fakeActor.GrantOrgManagerByUsernameCallCount()).To(Equal(1))
 						orgID, inputUsername := fakeActor.GrantOrgManagerByUsernameArgsForCall(0)
 						Expect(orgID).To(Equal("fake-org-id"))
@@ -149,7 +151,7 @@ var _ = Describe("CreateOrgCommand", func() {
 
 					It("returns an error and prints warnings", func() {
 						Expect(executeErr).To(MatchError("some-error"))
-						//TODO: figure out what is displayed
+						Expect(testUI.Err).To(Say("warn-role\n"))
 					})
 				})
 			})
@@ -166,6 +168,23 @@ var _ = Describe("CreateOrgCommand", func() {
 				It("returns an error and prints warnings", func() {
 					Expect(executeErr).To(MatchError("failed to create"))
 					Expect(testUI.Err).To(Say("warn-1\nwarn-2"))
+				})
+			})
+
+			When("creating the org failed because the name was taken", func() {
+				BeforeEach(func() {
+					fakeActor.CreateOrganizationReturns(
+						v2action.Organization{},
+						v2action.Warnings{"warn-1", "warn-2"},
+						actionerror.OrganizationNameTakenError{Name: orgName},
+					)
+				})
+
+				It("should print warnings and return nil because this error is not fatal", func() {
+					Expect(executeErr).NotTo(HaveOccurred())
+					Expect(testUI.Err).To(Say("warn-1\nwarn-2"))
+					Expect(testUI.Err).To(Say("Org %s already exists", orgName))
+					Expect(fakeActor.GrantOrgManagerByUsernameCallCount()).To(Equal(0))
 				})
 			})
 		})
